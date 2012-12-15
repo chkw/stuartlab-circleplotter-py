@@ -40,7 +40,7 @@ plot:
 	\
 	mkdir -p $(OUTPUT_DIR) ;
 	\
-	circlePlot.py \
+	python circlePlot.py \
 		-s sampleIDs.tmp \
 		-f features.tmp \
 		-o $(ORDERING_FEATURE) \
@@ -55,3 +55,5 @@ plot:
 #: delete output directory
 clean:
 	rm -rf $(OUTPUT_DIR)
+	rm *tmp
+	rm *pyc
