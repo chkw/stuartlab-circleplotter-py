@@ -28,8 +28,9 @@ def retColumns(inf, delim = "\t"):
     line = line.rstrip("\r\n")
     return(re.split(delim, line)[1:])
 
-def retRows(inf, delim = "\t"):
-    """returns the rows of a .tsv"""
+def retRows(inf, delim = "\t", aslist = False):
+    """returns first field the rows of a .tsv. if aslist=True it returns the
+    all fields as a list"""
     rows = []
     f = openAnyFile(inf)
     line = f.readline()
@@ -39,7 +40,10 @@ def retRows(inf, delim = "\t"):
         if line.isspace():
             continue
         line = line.rstrip("\r\n")
-        rows.append(re.split(delim, line)[0])
+        if aslist:
+            rows.append(re.split(delim,line))
+        else:
+            rows.append(re.split(delim, line)[0])
     return(rows)
     
 def rCRSData(inf, appendData = dict(), delim = "\t", retFeatures = False, debug = False):
