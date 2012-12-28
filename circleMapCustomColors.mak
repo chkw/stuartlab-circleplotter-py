@@ -11,14 +11,16 @@ DATA_DIR = Data
 # columns -> samples
 # rows -> features
 # This is the file where samples and features are specified.
-MATRIX_FILE = $(DATA_DIR)/sample_matrix.tab
-
-# feature to use for determining sample ordering
-ORDERING_FEATURE = APC
+MATRIX_FILE = $(DATA_DIR)/kegg-slea.expr-level.cdm
 
 # each additional matrix file in this list will add a ring
 # file format is same as for MATRIX_FILE
-OTHER_DATA_FILES = $(DATA_DIR)/sample_matrix_2.tab
+OTHER_DATA_FILES = $(DATA_DIR)/kegg-slea.gbm-subtype-codes.cdm
+
+# A file containing the color codings specified via the -k option.
+# When -k is specified, the file must contain color coding information 
+# for each ring
+COLOR_CODING = $(DATA_DIR)/kegg-slea.colorcoding.tsv
 
 # CircleMap images are output to this directory.
 OUTPUT_DIR = Circle_output
@@ -43,8 +45,8 @@ plot:
 	python circlePlot.py \
 		-s sampleIDs.tmp \
 		-f features.tmp \
-		-o $(ORDERING_FEATURE) \
 		-l \
+		-k $(COLOR_CODING) \
 		$(OUTPUT_DIR) \
 		$(MATRIX_FILE) \
 		$(OTHER_DATA_FILES) ;
@@ -57,4 +59,3 @@ clean:
 	rm -rf $(OUTPUT_DIR)
 	rm *tmp
 	rm *pyc
-	rm *~

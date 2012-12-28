@@ -8,6 +8,7 @@ Options:
   -s str		list file containing samples to include
   -f str		list file containing features to include
   -o str		feature;file[,file ...] or feature
+  -k str		file which can contain color scale information for each ring
   -c str		file to use as center colors
   -l			print the feature identifier in the circle or not (default: FALSE)
   -q			run quietly
@@ -16,6 +17,7 @@ Options:
 ## Modified By: Sam Ng
 ## Last Updated: 10/10/2011
 ## Modified by: chrisw DEC 2011
+## Modified by: Michael (michael.p.schroeder@gmail.com) - added custom color scales (Dec 2012)
 import getopt, math, os, sys, re
 from matplotlib import use
 
@@ -422,6 +424,21 @@ def getCohortMinMaxValues(featureList, sampleList, circleData):
 		maxValList.append(max([0.01] + floatList))
 
 	return (minValList, maxValList)
+ 
+def getColorScaleMinMaxValues(minValList, maxValList, ringNumber, colorscaleData):
+	# get min/max from colorscaleFile if not "-" has been put as first field		
+	if maxValList == None:
+		maxValList = [None]*ringNumber
+	if minValList == None:
+		minValList = [None]*ringNumber
+
+
+	for ring in xrange(ringNumber):
+		if ring < len(colorscaleData) and colorscaleData[ring][0] != "-":
+			#get min and max from colorscaleFile 
+			minValList[ring] = colorscaleData[ring][0][0]
+			maxValList[ring] = colorscaleData[ring][0][1]
+	return (minValList, maxValList)
 	
 def drawCircleImageForFeature(feature, samples, label, imgFile, circleData, circleColors, centerColHex=None, width=5, minValList=None, maxValList=None, purple0Hack=False):
 	"""Draw a circle map image and write it to a file."""
@@ -446,7 +463,7 @@ def drawCircleImageForFeature(feature, samples, label, imgFile, circleData, circ
 		# get minVal and maxVal
 		minVal = None
 		maxVal = None
-		if minValList == None or maxValList == None:
+		if minValList == None or maxValList == None or minValList[ring] == None or maxValList[ring] == None:
 			ringVals = []
 			
 			# get ring values in effort to find min/max values for each *ring*
@@ -559,7 +576,7 @@ def cgi_routine(outputDir, dataMatrixNameList, circleData, samples, features, or
 
 	return (outputFilesDict, samples)
 
-def cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, orderFeature, centerFile, printLabel, verbose, cohortMinMax=False, purpleHack = True):
+def cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, orderFeature, centerFile, colorscaleFile, printLabel, verbose, cohortMinMax=False, purpleHack = True):
 	"""Routine for program execution via command-line."""
 	# I've tried not to touch this method as much as possible.
 	# I don't want to break the way it was working for Sam Ng.
@@ -580,6 +597,46 @@ def cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, ord
 	# circleColorsPalette is a list of (minColor),(zeroColor),(maxColor)
 	circleColorsPalette = []
 
+	## read colorscaleFile
+	# the format is as follows - header compulsory:
+	# min/max	color coding	color1		color2		color 3
+	# -2,2		rgb		155,155,155	255,255,255	0,0,0,
+	# -		rgb		155,0,155	255,0,255	0,0,0,
+	# the "color format" is intended to support more color format, as I have 
+	# seen the html-colors in the code.
+	# Michael (michael.p.schroeder@gmail.com)
+	colorscaleData = None
+	if colorscaleFile != None:
+
+		if cohortMinMax:
+			log("WARNING: The -k option overrides -m")
+
+		colorscaleData = mData.retRows(colorscaleFile,aslist=True)
+		line=1 
+		for cs in colorscaleData:
+			line = line + 1
+			if len(cs) != 5:
+				log("ERROR: color scale needs five fields: datapoints, colorcoding(rgb) and three colors\n", die = True)
+			try:
+				cs[0] =  [float(x) for x in cs[0].split(",")]
+			except ValueError:
+				pass
+			if len(cs[0]) != 2 and cs[0] != "-":
+				print cs[0]
+				log("ERROR: Two data points or dash needed for color scale\n", die = True)
+			if cs[1].lower() == "rgb":
+				try:
+					cs[2] =  rgb(*[float(x) for x in cs[2].split(",")])
+					cs[3] =  rgb(*[float(x) for x in cs[3].split(",")])
+					cs[4] =  rgb(*[float(x) for x in cs[4].split(",")])
+				except TypeError:
+						log("ERROR: RGB needs three values on line " + str(line) + "\n", die = True)
+				except ValueError:
+						log("ERROR: RGB color not correctly defined on line " + str(line) + "\n", die=True)
+			else:
+				log("ERROR: Unknown color coding on line " + str(line) + ": " + str(cs[1]) + "\n", die=True)
+
+
 	for i in xrange(len(circleFiles)):
 		# get data, samples, and features from each circleFile
 		# data is a dict[col][row]=score
@@ -590,6 +647,11 @@ def cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, ord
 		minCol = lightBlueRGB
 		zerCol = whiteRGB
 		maxCol = redRGB
+		if colorscaleFile != None and i<len(colorscaleData):
+			#get colors from specified colorscaleFile
+			minCol = colorscaleData[i][2]
+			zerCol = colorscaleData[i][3]
+			maxCol = colorscaleData[i][4]
 
 		# special cases for -meth and -mut
 #		if circleFiles[i].endswith("meth"):
@@ -677,6 +739,9 @@ def cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, ord
 	else:
 		(minValList, maxValList) = (None, None)
 
+	if colorscaleData != None:
+		(minValList, maxValList) = getColorScaleMinMaxValues(minValList, maxValList, len(circleData), colorscaleData)
+
 	for feature in features:
 		log("Drawing %s\n" % (feature))
 		centerColHex = None
@@ -704,7 +769,7 @@ def main(args):
 
 	## parse arguments
 	try:
-		opts, args = getopt.getopt(args, "s:f:o:c:lqm")
+		opts, args = getopt.getopt(args, "s:f:o:c:k:lqm")
 	except getopt.GetoptError, err:
 		print str(err)
 		usage(2)
@@ -718,8 +783,10 @@ def main(args):
 	featureFile = None
 	orderFeature = None
 	centerFile = None
+	colorscaleFile = None
 	printLabel = False
 	cohortMinMax = False
+	orderFiles = None
 
 	global verbose
 	for o, a in opts:
@@ -737,6 +804,8 @@ def main(args):
 				orderFiles = re.split(",", sa[1])
 		elif o == "-c":
 			centerFile = a
+		elif o == "-k":
+			colorscaleFile = a
 		elif o == "-l":
 			printLabel = True
 		elif o == "-q":
@@ -746,7 +815,7 @@ def main(args):
 	# end section for parsing arguments
 	
 	# execute the routine for command-line usage
-	cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, orderFeature, centerFile, printLabel, verbose, cohortMinMax=cohortMinMax)
+	cli_routine(outputDir, circleFiles, orderFiles, sampleFile, featureFile, orderFeature, centerFile, colorscaleFile, printLabel, verbose, cohortMinMax=cohortMinMax)
 
 # some rgb colors
 blueRGB = rgb(0, 0, 255)
