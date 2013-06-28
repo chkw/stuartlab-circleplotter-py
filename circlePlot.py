@@ -1,6 +1,9 @@
 #!/usr/bin/env python
 """circlePlot.py: 
 
+Citation:
+   Wong CK, Vaske CJ, Ng S, Sanborn J, Benz S. Haussler D, Stuart J. The UCSC Interaction Browser: Multi-dimensional data views in pathway context. Nucleic Acids Research. 2013 Jul 1;41(Web Server issue):W218-24. doi: 10.1093/nar/gkt473. PMID:23748957.
+
 Usage:
   circlePlot.py [options] outputDir inputFile [inputFile ...]
 
