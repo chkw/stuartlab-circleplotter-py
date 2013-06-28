@@ -7,3 +7,6 @@ Two examples are included and can be generated as follows:
 To plot your own CircleMaps, you can put your own data files in the data directory and then make the corresponding changes to the makefile.
 
 To clean the directory (remove results and temporary files generated upon execution) type the following command: **make clean**
+
+CITATION
+Wong CK, Vaske CJ, Ng S, Sanborn J, Benz S. Haussler D, Stuart J. The UCSC Interaction Browser: Multi-dimensional data views in pathway context. Nucleic Acids Research. 2013 Jul 1;41(Web Server issue):W218-24. doi: 10.1093/nar/gkt473. PMID:23748957.
